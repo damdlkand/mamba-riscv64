@@ -1,0 +1,25 @@
+map_run_deps:
+  libX11.so.6:   "libx11"
+  libgfortran.so.5: "libgfortran"
+  libopenblas.so.0: "openblas"
+  libquadmath.so.0: "libquadmath"
+  libblas.so.3: "openblas"
+  liblapack.so.3: "openblas"
+  libssl.so.3: "openssl"
+  libcrypto.so.3: "openssl"
+    # xxhash 依赖
+  libxxhash.so.0: "libxxhash"
+  
+python_site_requires:
+  scipy: ["libgfortran","numpy"]
+
+test_snippets:
+  import_only: "python -c \"import {module}; print('OK')\""
+# 针对 bin 包的简单可执行测试
+bin_tests:
+  jq:
+    - "jq --version"
+    - "echo '{\"a\":1}' | jq -r '.a' | grep -q '^1$'"
+  file:
+    - "file --version"
+    - "file /bin/sh | grep -qi 'executable'"

@@ -1,0 +1,28 @@
+package:
+  name: file
+  version: 5.46
+
+source: { path: . }
+
+build:
+  number: 0
+  string: "riscv64_aptwrap_0"
+  binary_relocation: False
+  script_env:
+    - LD_LIBRARY_PATH
+    - LD_PRELOAD
+
+
+test:
+  commands:
+    - "file --version"
+    - "file /bin/sh | grep -qi 'executable'"
+
+about:
+  summary: "Wrapped from Debian packages: file_*riscv64.deb"
+  license: BSD-3-Clause
+  home: "file:///workspace/local-conda-channel/"
+
+extra:
+  recipe-maintainers: [ you ]
+

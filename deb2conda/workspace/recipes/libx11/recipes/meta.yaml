@@ -1,0 +1,27 @@
+package:
+  name: libx11
+  version: 1.6.9_2ubuntu1
+
+source: { path: . }
+
+build:
+  number: 0
+  string: "riscv64_aptwrap_0"
+  binary_relocation: False
+  script_env:
+    - LD_LIBRARY_PATH
+    - LD_PRELOAD
+
+
+test:
+  commands:
+    - "bash -c 'test -e \"$PREFIX/lib/libX11.so.6\"'"
+
+about:
+  summary: "Wrapped from Debian packages: libx11-6_*riscv64.deb"
+  license: BSD-3-Clause
+  home: "file:///workspace/local-conda-channel/"
+
+extra:
+  recipe-maintainers: [ you ]
+
