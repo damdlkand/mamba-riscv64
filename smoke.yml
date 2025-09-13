@@ -1,0 +1,15 @@
+name: RISC-V smoke test
+on:
+  workflow_dispatch:   # 允许手动触发
+  push:                # 推送也会触发
+jobs:
+  hello:
+    runs-on: [self-hosted, linux, riscv64]   # 和你注册的标签一致
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print env
+        run: |
+          uname -a
+          echo "Runner labels: $RUNNER_NAME [$RUNNER_OS/$RUNNER_ARCH]"
+      - name: Build script dry-run
+        run: ls -al
