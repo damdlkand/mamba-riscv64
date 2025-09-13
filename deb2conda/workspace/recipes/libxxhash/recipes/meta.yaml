@@ -1,0 +1,27 @@
+package:
+  name: libxxhash
+  version: 0.8.3
+
+source: { path: . }
+
+build:
+  number: 0
+  string: "riscv64_aptwrap_0"
+  binary_relocation: False
+  script_env:
+    - LD_LIBRARY_PATH
+    - LD_PRELOAD
+
+
+test:
+  commands:
+    - "bash -c 'test -e \"$PREFIX/lib/libxxhash.so.0\"'"
+
+about:
+  summary: "Wrapped from Debian packages: libxxhash0_*riscv64.deb"
+  license: BSD-3-Clause
+  home: "file:///workspace/local-conda-channel/"
+
+extra:
+  recipe-maintainers: [ you ]
+

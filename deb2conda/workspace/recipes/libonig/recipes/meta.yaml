@@ -1,0 +1,27 @@
+package:
+  name: libonig
+  version: 6.9.9
+
+source: { path: . }
+
+build:
+  number: 0
+  string: "riscv64_aptwrap_0"
+  binary_relocation: False
+  script_env:
+    - LD_LIBRARY_PATH
+    - LD_PRELOAD
+
+
+test:
+  commands:
+    - "echo OK"
+
+about:
+  summary: "Wrapped from Debian packages: libonig5_*riscv64.deb"
+  license: BSD-3-Clause
+  home: "file:///workspace/local-conda-channel/"
+
+extra:
+  recipe-maintainers: [ you ]
+

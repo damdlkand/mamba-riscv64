@@ -1,0 +1,32 @@
+package:
+  name: jq
+  version: 1.7.1
+
+source: { path: . }
+
+build:
+  number: 0
+  string: "riscv64_aptwrap_0"
+  binary_relocation: False
+  script_env:
+    - LD_LIBRARY_PATH
+    - LD_PRELOAD
+
+requirements:
+  run:
+    - libjq
+    - libonig
+
+test:
+  commands:
+    - "jq --version"
+    - "echo '{\"a\":1}' | jq -r '.a' | grep -q '^1$'"
+
+about:
+  summary: "Wrapped from Debian packages: jq_*riscv64.deb"
+  license: BSD-3-Clause
+  home: "file:///workspace/local-conda-channel/"
+
+extra:
+  recipe-maintainers: [ you ]
+

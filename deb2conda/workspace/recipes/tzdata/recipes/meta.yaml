@@ -1,0 +1,27 @@
+package:
+  name: tzdata
+  version: 2025
+
+source: { path: . }
+
+build:
+  number: 0
+  string: "riscv64_aptwrap_0"
+  binary_relocation: False
+  script_env:
+    - LD_LIBRARY_PATH
+    - LD_PRELOAD
+
+
+test:
+  commands:
+    - "bash -c 'test -e \"$PREFIX/share/zoneinfo/UTC\"'"
+
+about:
+  summary: "Wrapped from Debian packages: tzdata_*all.deb"
+  license: BSD-3-Clause
+  home: "file:///workspace/local-conda-channel/"
+
+extra:
+  recipe-maintainers: [ you ]
+

@@ -1,0 +1,66 @@
+channel_root: /workspace/local-conda-channel/
+
+# 你要打的 conda 包列表（名字=将来的 conda 包名）
+packages:
+  - name: libx11
+    debs: [ libx11-6_*riscv64.deb ]
+    kind: lib
+
+  - name: libgfortran
+    debs: [ libgfortran5_*riscv64.deb ]
+    kind: lib
+
+  - name: scipy
+    debs: [ python3-scipy_1.13.*_riscv64.deb ]   # 只选 1.13.*（cp312）
+    kind: python_ext
+    extras: { pyver: "3.12", pyabi: "312", needs: [ "python >=3.12,<3.13", numpy, openblas, libgfortran ], ensure_modules: [scipy] }
+
+
+  - name: python
+    version: "3.9.18"
+    debs:
+      - python3.9-minimal_*riscv64.deb
+      - python3.9_*riscv64.deb
+      - libpython3.9-stdlib_*riscv64.deb
+      - libpython3.9-minimal_*riscv64.deb
+    kind: python_core
+    extras: { pyver: "3.9", pyabi: "39", ensure_modules: [_ssl, _hashlib] }
+
+#test kind==bin
+  - name: libjq
+    version: "1.7.1"
+    debs: [ libjq1_*riscv64.deb ]
+    kind: lib
+
+
+
+
+  - name: libonig
+    version: "6.9.9"
+    debs: [ libonig5_*riscv64.deb ]
+    kind: lib
+
+  - name: jq
+    version: "1.7.1"
+    debs: [ jq_*riscv64.deb ]
+    kind: bin
+    extras: { needs: [ libjq,libonig] }
+
+  # 纯数据包：时区数据库 tzdata（示例版本 2025b-0+deb12u1）
+  - name: tzdata
+    version: "2025"
+    debs: [ tzdata_*all.deb ]
+    kind: data
+    extras:
+      test_cmds:
+        - "bash -c 'test -e \"$PREFIX/share/zoneinfo/UTC\"'"
+
+
+
+  # xxhash 运行时库（从指定 URL 拉取），供其他包通过 DSO 映射引用
+  - name: libxxhash
+    version: "0.8.3"
+    debs: [ libxxhash0_*riscv64.deb ]
+    kind: lib
+    urls:
+      - http://ftp.debian.org/debian/pool/main/x/xxhash/libxxhash0_0.8.3-2_riscv64.deb

@@ -1,0 +1,33 @@
+package:
+  name: scipy
+  version: 1.13.1_3
+
+source: { path: . }
+
+build:
+  number: 0
+  string: "riscv64_aptwrap_0"
+  binary_relocation: False
+  script_env:
+    - LD_LIBRARY_PATH
+    - LD_PRELOAD
+
+requirements:
+  run:
+    - python >=3.12,<3.13
+    - numpy
+    - openblas
+    - libgfortran
+
+test:
+  commands:
+    - "python -c \"import scipy; print('OK')\""
+
+about:
+  summary: "Wrapped from Debian packages: python3-scipy_1.13.*_riscv64.deb"
+  license: BSD-3-Clause
+  home: "file:///workspace/local-conda-channel/"
+
+extra:
+  recipe-maintainers: [ you ]
+

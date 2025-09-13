@@ -1,0 +1,15 @@
+dependencies/
+local-conda-channel/
+*.tar
+*.tar.gz
+*.tgz
+wget-log
+glibc_fix/
+*.deb
+buildx/
+dependencies/
+local-conda-channel/
+*.tar
+*.tar.gz
+*.tgz
+wget-log

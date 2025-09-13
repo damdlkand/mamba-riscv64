@@ -1,0 +1,28 @@
+package:
+  name: python
+  version: 3.9.18
+
+source: { path: . }
+
+build:
+  number: 0
+  string: "riscv64_aptwrap_0"
+  binary_relocation: False
+  script_env:
+    - LD_LIBRARY_PATH
+    - LD_PRELOAD
+
+
+test:
+  commands:
+    - "python -c \"import _ssl; print('OK')\""
+    - "python -c \"import _hashlib; print('OK')\""
+
+about:
+  summary: "Wrapped from Debian packages: python3.9-minimal_*riscv64.deb, python3.9_*riscv64.deb, libpython3.9-stdlib_*riscv64.deb, libpython3.9-minimal_*riscv64.deb"
+  license: BSD-3-Clause
+  home: "file:///workspace/local-conda-channel/"
+
+extra:
+  recipe-maintainers: [ you ]
+
