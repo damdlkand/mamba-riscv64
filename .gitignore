@@ -13,3 +13,10 @@ local-conda-channel/
 *.tar.gz
 *.tgz
 wget-log
+deb2conda/conda-bld/
+deb2conda/build/
+deb2conda/output/
+deb2conda/work/
+deb2conda/**/*.deb
+deb2conda/**/*.tar*
+deb2conda/*.log
