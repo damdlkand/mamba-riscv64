@@ -1,0 +1,47 @@
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source: { path: . }
+
+build:
+  number: {{ build_number }}
+  string: "riscv64_aptwrap_{{ build_number }}"
+  binary_relocation: False
+  script_env:
+    - LD_LIBRARY_PATH
+    - LD_PRELOAD
+  {% if missing_dso %}
+  missing_dso_whitelist:
+  {%- for m in missing_dso %}
+    - {{ m }}
+  {%- endfor %}
+  {% endif %}
+
+{% if run_deps and run_deps|length > 0 %}
+requirements:
+  run:
+{% for r in run_deps %}
+    - {{ r }}
+{% endfor %}
+{% endif %}
+
+test:
+  commands:
+{% if test_cmds and test_cmds|length > 0 %}
+{% for cmd in test_cmds %}
+    - "{{ cmd | replace('"', '\\"') }}"
+{% endfor %}
+{% else %}
+    - "echo OK"
+{% endif %}
+
+about:
+  summary: "{{ summary }}"
+  license: {{ license|default('BSD-3-Clause') }}
+  home: "file:///workspace/local-conda-channel/"
+
+extra:
+  recipe-maintainers: [ you ]
+
+
