@@ -1,6 +1,5 @@
 # Dockerfile
 FROM openkylin/openkylin
-
 # 设置非交互式安装和时区
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
@@ -66,8 +65,26 @@ WORKDIR /opt/builder
 
 # 复制构建脚本到镜像中
 COPY build_dep.sh .
-
-# 赋予脚本执行权限并运行脚本
+COPY dependencies/mamba ./mamba
+COPY dependencies/openssl.tar.gz .
+COPY dependencies/reproc ./reproc
+COPY dependencies/simdjson ./simdjson
+COPY dependencies/yaml-cpp-repo ./yaml-cpp-repo
+COPY dependencies/CLI11 ./CLI11
+COPY dependencies/zlib.tar.gz ./
+COPY dependencies/fmt ./fmt
+COPY dependencies/json ./json
+COPY dependencies/spdlog ./spdlog
+COPY dependencies/Python-3.11.7.tgz ./
+COPY dependencies/libunistring.tar.gz ./
+COPY dependencies/conda ./conda
+COPY dependencies/conda-index ./conda-index
+COPY dependencies/conda-smithy ./conda-smithy
+COPY dependencies/conda-build ./conda-build
+COPY dependencies/conda-libmamba-solver ./conda-libmamba-solver
+COPY dependencies/menuinst ./menuinst
+COPY dependencies/LIEF ./LIEF
+# 赋予脚本执行权限并运行脚�
 # 脚本执行完毕后将其删除
 RUN chmod +x ./build_dep.sh && \
     ./build_dep.sh && \
@@ -89,6 +106,11 @@ RUN chmod +x ./build_python.sh && \
     ./build_python.sh && \
     rm ./build_python.sh
 
+COPY build_python311.sh .
+
+RUN chmod +x ./build_python311.sh && \
+    ./build_python311.sh && \
+    rm ./build_python311.sh
 #拷贝glibc_fix 文件夹
 COPY glibc_fix .
 
@@ -117,7 +139,7 @@ ENV MICROMAMBA_INSTALL_DIR="/opt/conda_tools/micromamba"
 ENV CONDA_ENV_DIR="/opt/conda_tools/env"
 # 将 $HOME/.cargo/bin (即 /root/.cargo/bin) 添加到 PATH
 ENV PATH="/root/.cargo/bin:${MICROMAMBA_INSTALL_DIR}/bin:${CONDA_ENV_DIR}/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/conda_static_deps/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/opt/conda_static_deps/lib:/opt/conda_static_deps/lib64:${LD_LIBRARY_PATH}"
 
 # 确保 ~/.bash_profile (如果存在并被登录 shell 读取) 会加载 ~/.bashrc。
 # 大多数情况下，交互式 `docker run ... bash` 是非登录 shell，会直接读取 ~/.bashrc。
@@ -135,7 +157,12 @@ SHELL ["/bin/bash", "-c"]
 # 设置 MAMBA_ROOT_PREFIX 环境变量，micromamba shell init 可能会参考它。
 # 并且在 init 命令中也明确指定 --root-prefix。
 ENV MAMBA_ROOT_PREFIX=${MICROMAMBA_INSTALL_DIR}
-
+ENV LD_PRELOAD="/opt/conda_static_deps/lib/libxml2.so.2:\
+/opt/conda_static_deps/lib/libbrotlidec.so.1:\
+/opt/conda_static_deps/lib/libbrotlicommon.so.1:\
+/opt/conda_static_deps/lib/libpsl.so.5:\
+/opt/conda_static_deps/lib/libidn2.so.0:\
+/opt/conda_static_deps/lib/libunistring.so.5"
 # 初始化 micromamba。
 # 根据 micromamba 运行时错误信息的提示，显式使用 --root-prefix 参数，
 # 指向我们 micromamba 的实际安装目录。

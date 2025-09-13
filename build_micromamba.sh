@@ -23,10 +23,25 @@ export CXXFLAGS="-fPIC ${CXXFLAGS}"
 export LDFLAGS="-L${DEPS_PREFIX}/lib -L${DEPS_PREFIX}/lib64 ${LDFLAGS}"
 export CMAKE_PREFIX_PATH="${DEPS_PREFIX}:${CMAKE_PREFIX_PATH}"
 
+
+export LD_LIBRARY_PATH=/opt/conda_static_deps/lib64:/opt/conda_static_deps/lib:$LD_LIBRARY_PATH
+
 echo "=== 1. 从源码安装 Micromamba ==="
 # Micromamba 的编译依赖 (cmake, C++ 编译器等) 应已在 Dockerfile 中安装
-cd /tmp # 在 /tmp 目录进行编译，避免污染工作目录
-git clone --depth 1 https://github.com/mamba-org/mamba.git
+cd /tmp # 在 /tmp 目录进行编译，避免污染工作目�
+
+#git clone --depth 1 https://github.com/mamba-org/mamba.git
+#git clone git@gitee.com:physicaldddd/mamba.git
+
+#mv  /home/wulin/conda-docker/conda-docker/mamba ./
+
+#if [ ! -d mamba ]; then
+#    git clone --depth 1 https://github.com/mamba-org/mamba.git
+#else
+#    echo "mamba 目录已存在，跳过 git clone。"
+#fi
+#ls ./
+cp -r /opt/builder/mamba ./
 cd mamba
 
 # 在运行 CMake 之前修补 mamba 的 libmamba/CMakeLists.txt
@@ -246,15 +261,29 @@ echo "Listing ${DEPS_PREFIX}/share/cmake:"
 ls -R "${DEPS_PREFIX}/share/cmake" || echo "Directory ${DEPS_PREFIX}/share/cmake not found or ls failed"
 echo "--- End listing CMake files ---"
 
+#cmake .. -DCMAKE_INSTALL_PREFIX="${MICROMAMBA_INSTALL_DIR}" \
+#         -DBUILD_LIBMAMBA=ON \
+#         -DBUILD_MICROMAMBA=ON \
+#         -DBUILD_SHARED=OFF \
+#         -DBUILD_STATIC=ON \
+#	 -DCMAKE_CXX_FLAGS="-I/usr/local/include"\
+#         -DCMAKE_PREFIX_PATH="${DEPS_PREFIX}" 
 cmake .. -DCMAKE_INSTALL_PREFIX="${MICROMAMBA_INSTALL_DIR}" \
          -DBUILD_LIBMAMBA=ON \
          -DBUILD_MICROMAMBA=ON \
          -DBUILD_SHARED=OFF \
          -DBUILD_STATIC=ON \
-         -DCMAKE_PREFIX_PATH="${DEPS_PREFIX}" 
+         -DCMAKE_PREFIX_PATH="${DEPS_PREFIX}" \
+         -DCMAKE_C_COMPILER=gcc-14 \
+         -DCMAKE_CXX_COMPILER=g++-14 \
+         -DCMAKE_CXX_STANDARD=20 \
+         -Dfmt_DIR="${DEPS_PREFIX}/lib64/cmake/fmt"
 
 make -j$(nproc) # 使用所有可用的 CPU核心进行编译
 make install
+
+#cp /opt/conda_static_deps/lib64/libsolv.so.1  /opt/conda_static_deps/lib/
+cp /opt/conda_static_deps/lib64/lib* /opt/conda_static_deps/lib/
 cd /tmp # 返回 /tmp
 rm -rf mamba # 清理源码
 echo "Micromamba 已安装到 ${MICROMAMBA_INSTALL_DIR}/bin"

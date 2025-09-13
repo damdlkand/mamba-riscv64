@@ -1,0 +1,9 @@
+dependencies/
+local-conda-channel/
+*.tar
+*.tar.gz
+*.tgz
+wget-log
+.git
+.gitignore
+README.md

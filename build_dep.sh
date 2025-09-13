@@ -124,37 +124,40 @@ echo "=== 开始编译和安装 Micromamba 的静态依赖库 (安装到 ${DEPS_
 
 # 1. zlib
 echo "正在安装 zlib..."
-download_with_retry https://zlib.net/zlib-1.3.1.tar.gz zlib.tar.gz
+#download_with_retry https://zlib.net/zlib-1.3.1.tar.gz zlib.tar.gz
+cp /opt/builder/zlib.tar.gz ./
 tar -xzf zlib.tar.gz
 (cd zlib-1.3.1 && ./configure --prefix="${DEPS_PREFIX}" --static && make -j$(nproc) && make install)
 rm -rf zlib-1.3.1 zlib.tar.gz
 
 # 2. OpenSSL
 echo "正在安装 OpenSSL..."
-download_with_retry https://www.openssl.org/source/openssl-3.5.0.tar.gz openssl.tar.gz
+#download_with_retry https://www.openssl.org/source/openssl-3.5.0.tar.gz openssl.tar.gz
+cp /opt/builder/openssl.tar.gz  ./
 tar -xzf openssl.tar.gz
 (cd openssl-3.5.0 && ./config --prefix="${DEPS_PREFIX}" --openssldir="${DEPS_PREFIX}/ssl" zlib && make -j$(nproc) && make install_sw)
 rm -rf openssl-3.5.0 openssl.tar.gz
 
 # 3. libunistring (libidn2 的依赖)
 echo "正在安装 libunistring..."
-download_with_retry https://ftp.gnu.org/gnu/libunistring/libunistring-1.2.tar.gz libunistring.tar.gz
+#download_with_retry https://ftp.gnu.org/gnu/libunistring/libunistring-1.2.tar.gz libunistring.tar.gz
+cp /opt/builder/libunistring.tar.gz ./
 tar -xzf libunistring.tar.gz
-(cd libunistring-1.2 && ./configure --prefix="${DEPS_PREFIX}" --disable-shared && make -j$(nproc) && make install)
+(cd libunistring-1.2 && ./configure --prefix="${DEPS_PREFIX}" --enable-shared && make -j$(nproc) && make install)
 rm -rf libunistring-1.2 libunistring.tar.gz
 
 # 4. libidn2 (依赖 libunistring)
 echo "正在安装 libidn2..."
 download_with_retry https://ftp.gnu.org/gnu/libidn/libidn2-2.3.7.tar.gz libidn2.tar.gz
 tar -xzf libidn2.tar.gz
-(cd libidn2-2.3.7 && ./configure --prefix="${DEPS_PREFIX}" --disable-shared --with-libunistring-prefix="${DEPS_PREFIX}" && make -j$(nproc) && make install)
+(cd libidn2-2.3.7 && ./configure --prefix="${DEPS_PREFIX}" --enable-shared --with-libunistring-prefix="${DEPS_PREFIX}" && make -j$(nproc) && make install)
 rm -rf libidn2-2.3.7 libidn2.tar.gz
 
 # 5. libxml2 (依赖 zlib)
 echo "正在安装 libxml2..."
 download_with_retry https://download.gnome.org/sources/libxml2/2.12/libxml2-2.12.6.tar.xz libxml2.tar.xz
 tar -xf libxml2.tar.xz
-(cd libxml2-2.12.6 && ./configure --prefix="${DEPS_PREFIX}" --disable-shared --without-python --with-zlib="${DEPS_PREFIX}" && make -j$(nproc) && make install)
+(cd libxml2-2.12.6 && ./configure --prefix="${DEPS_PREFIX}" --enable-static --without-python --with-zlib="${DEPS_PREFIX}" && make -j$(nproc) && make install)
 rm -rf libxml2-2.12.6 libxml2.tar.xz
 
 # 6. brotli
@@ -164,7 +167,7 @@ tar -xzf brotli-v1.1.0.tar.gz
 (cd brotli-1.1.0 && mkdir build && cd build && cmake .. \
   -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
   -DCMAKE_INSTALL_LIBDIR="lib" \
-  -DBUILD_SHARED_LIBS=OFF \
+  -DBUILD_SHARED_LIBS=ON \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_POSITION_INDEPENDENT_CODE=ON &&
   make -j$(nproc) && make install)
@@ -177,7 +180,7 @@ echo "============Brotli 编译安装完成============"
 echo "正在安装 libpsl..."
 download_with_retry https://github.com/rockdaboot/libpsl/releases/download/0.21.5/libpsl-0.21.5.tar.gz libpsl.tar.gz
 tar -xzf libpsl.tar.gz
-(cd libpsl-0.21.5 && ./configure --prefix="${DEPS_PREFIX}" --disable-shared --with-libidn2-prefix="${DEPS_PREFIX}" && make -j$(nproc) && make install)
+(cd libpsl-0.21.5 && ./configure --prefix="${DEPS_PREFIX}" --enable-shared --with-libidn2-prefix="${DEPS_PREFIX}" && make -j$(nproc) && make install)
 rm -rf libpsl-0.21.5 libpsl.tar.gz
 
 # 8. cURL (libcurl) (依赖 OpenSSL, zlib, brotli, libidn2, libpsl)
@@ -212,10 +215,8 @@ tar -xzf libsolv-0.7.32.tar.gz
 (cd libsolv-0.7.32 && mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
   -DENABLE_CONDA=ON \
   -DENABLE_STATIC=ON \
-  -DDISABLE_SHARED=ON \
-  -DENABLE_STATIC_PIC=ON \
+  -DDISABLE_SHARED=OFF \
   -DWITH_LIBXML2="${DEPS_PREFIX}" \
-  -DWITH_ZLIB="${DEPS_PREFIX}" \
   -DCMAKE_BUILD_TYPE=Release &&
   make -j$(nproc) && make install)
 rm -rf libsolv-0.7.32 libsolv-0.7.32.tar.gz
@@ -250,7 +251,8 @@ rm -rf expected-1.1.0 tl-expected-v1.1.0.tar.gz
 
 # 12. reproc reproc-cpp
 echo "正在安装 reproc reproc-cpp..."
-git_clone_with_retry https://github.com/DaanDeMeyer/reproc.git
+#git_clone_with_retry https://github.com/DaanDeMeyer/reproc.git
+cp -r /opt/builder/reproc ./reproc
 (
   cd reproc &&
     mkdir build &&
@@ -263,7 +265,8 @@ rm -rf reproc
 
 # 13. nlohmann-json (Header-only, 但确保安装 CMake files)
 echo "正在安装 nlohmann-json..."
-git_clone_with_retry https://github.com/nlohmann/json.git
+#git_clone_with_retry https://github.com/nlohmann/json.git
+cp -r /opt/builder/json ./json
 (
   cd json &&
     mkdir build &&
@@ -275,7 +278,8 @@ rm -rf json
 
 # 14. simdjson
 echo "正在安装 simdjson..."
-git_clone_with_retry https://github.com/simdjson/simdjson.git
+#git_clone_with_retry https://github.com/simdjson/simdjson.git
+cp -r /opt/builder/simdjson ./simdjson
 (
   cd simdjson &&
     mkdir build &&
@@ -296,7 +300,8 @@ rm -rf simdjson
 
 # 15. yaml-cpp
 echo "正在安装 yaml-cpp..."
-git_clone_with_retry https://github.com/jbeder/yaml-cpp.git yaml-cpp-repo
+#git_clone_with_retry https://github.com/jbeder/yaml-cpp.git yaml-cpp-repo
+cp -r /opt/builder/yaml-cpp-repo ./yaml-cpp-repo
 (
   cd yaml-cpp-repo &&
     mkdir build &&
@@ -309,7 +314,8 @@ rm -rf yaml-cpp-repo
 
 # 16. CLI11
 echo "正在安装 CLI11..."
-git_clone_with_retry https://github.com/CLIUtils/CLI11.git
+#git_clone_with_retry https://github.com/CLIUtils/CLI11.git
+cp -r /opt/builder/CLI11 ./CLI11
 (
   cd CLI11 &&
     mkdir build &&
@@ -331,7 +337,8 @@ rm -rf e2fsprogs-1.47.2 e2fsprogs.tar.gz
 
 # 18. bzip2 (libbz2)
 echo "正在安装 bzip2..."
-download_with_retry https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz bzip2.tar.gz
+download_with_retry https://mirrors.tuna.tsinghua.edu.cn/sourceware/bzip2/bzip2-1.0.8.tar.gz bzip2.tar.gz
+#download_with_retry https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz bzip2.tar.gz
 tar -xzf bzip2.tar.gz
 (cd bzip2-1.0.8 &&
   make install PREFIX="${DEPS_PREFIX}" CFLAGS="-fPIC -O2 -g -D_FILE_OFFSET_BITS=64" &&
@@ -363,7 +370,7 @@ download_with_retry https://github.com/facebook/zstd/releases/download/v1.5.6/zs
 tar -xzf zstd.tar.gz
 (cd zstd-1.5.6 && rm -rf cmake-build && mkdir cmake-build && cd cmake-build && cmake ../build/cmake \
   -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
-  -DZSTD_BUILD_SHARED=OFF \
+  -DZSTD_BUILD_SHARED=ON \
   -DZSTD_BUILD_STATIC=ON \
   -DZSTD_PROGRAMS_ENABLE=OFF \
   -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
@@ -423,6 +430,41 @@ tar -xzf krb5.tar.gz
   make -j$(nproc) && make install)
 rm -rf krb5-1.21.2 krb5.tar.gz
 
+# 25. 安装pybind11
+echo "正在安装 pybind11..."
+download_with_retry https://github.com/pybind/pybind11/archive/refs/tags/v2.11.1.tar.gz pybind11.tar.gz
+tar -xzf pybind11.tar.gz
+(cd pybind11-2.11.1 && mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON && make -j$(nproc) && make install)
+rm -rf pybind11-2.11.1 pybind11.tar.gz
+
+#26. fmt
+cp -r /opt/builder/fmt ./fmt
+(
+cd fmt&&
+mkdir build && cd build &&
+
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/conda_static_deps -DBUILD_SHARED_LIBS=OFF -DFMT_TEST=OFF&&
+make -j$(nproc)&&
+make install
+)
+rm -rf fmt
+
+#27. spdlog
+cp -r /opt/builder/spdlog ./spdlog
+(
+cd spdlog&&
+mkdir -p build &&
+cd build &&
+    cmake .. \
+      -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DSPDLOG_BUILD_SHARED=OFF \
+      -DSPDLOG_BUILD_STATIC=ON \
+      -DSPDLOG_BUILD_TESTS=OFF && 
+ make -j$(nproc) &&
+ make install
+)
+rm -rf spdlog
 # 清理构建目录并返回原始目录
 cd "${ORIG_DIR}"
 rm -rf "${BUILD_DIR}"

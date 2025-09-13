@@ -30,7 +30,22 @@ echo "基础 Conda 环境结构已创建于 ${CONDA_ENV_DIR}"
 
 # 辅助函数，用于在创建的 Conda 环境中执行命令
 run_in_env() {
-    "${MICROMAMBA_INSTALL_DIR}/bin/micromamba" run -p "${CONDA_ENV_DIR}" "$@"
+   # echo "run_in_env-------start"
+    #"${MICROMAMBA_INSTALL_DIR}/bin/micromamba" run -p "${CONDA_ENV_DIR}" "$@"
+    #exit_code=$?
+    #echo "micromamba exit code: $exit_code"
+    #echo "run_in_env-------end"
+    cd /opt/conda_tools/micromamba/bin
+
+    # 手动初始化shell hook（关键步骤）
+    eval "$(/opt/conda_tools/micromamba/bin/micromamba shell hook --shell bash)"
+
+    # 现在可以使用micromamba命令了
+    micromamba activate ${CONDA_ENV_DIR}
+    "$@"
+    micromamba deactivate
+
+    cd -
 }
 
 echo "=== 2.1. 从源码编译并安装 Python 到 Conda 环境 ==="
@@ -39,7 +54,7 @@ echo "=== 2.1. 从源码编译并安装 Python 到 Conda 环境 ==="
 # build_dep.sh 应该已经编译了 openssl, zlib 等到 DEPS_PREFIX
 PYTHON_VERSION="3.12.10" # 您选择一个合适的 Python 版本
 PYTHON_SRC_DIR="/tmp/Python-${PYTHON_VERSION}"
-
+#cp /opt/conda_static_deps/lib64/* /opt/conda_static_deps/lib/
 cd /tmp
 if [ ! -f "Python-${PYTHON_VERSION}.tgz" ]; then
     wget "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz" --no-check-certificate
@@ -89,11 +104,17 @@ echo "Python ${PYTHON_VERSION} 已编译并安装到 ${CONDA_ENV_DIR}"
 
 # 验证环境中新安装的 Python 和 Pip
 run_in_env echo "Micromamba run test in env ${CONDA_ENV_DIR} successful."
+echo "1---end"
 run_in_env python --version # 确认使用的是我们编译的 Python
+echo "2---end"
 run_in_env pip --version   # 确认 pip 也来自我们编译的 Python
+echo "3---end"
 run_in_env python -c "import ssl; print(ssl.OPENSSL_VERSION)" # 检查链接的 OpenSSL 版本
 # 验证python加载的so库
+echo "4---end"
 run_in_env ldd "${CONDA_ENV_DIR}/bin/python"
+
+echo "all---end"
 
 echo "=== 安装完成 ==="
 echo "Micromamba 安装于: ${MICROMAMBA_INSTALL_DIR}/bin"
@@ -103,3 +124,6 @@ echo "如果需要在新的交互式 shell 中激活环境 (例如在容器内):
 echo "  micromamba activate ${CONDA_ENV_DIR}"
 echo "或者 (如果 micromamba 不在 PATH):"
 echo "  ${MICROMAMBA_INSTALL_DIR}/bin/micromamba activate ${CONDA_ENV_DIR}" 
+
+
+
