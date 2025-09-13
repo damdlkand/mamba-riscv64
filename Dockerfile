@@ -65,25 +65,25 @@ WORKDIR /opt/builder
 
 # 复制构建脚本到镜像中
 COPY build_dep.sh .
-COPY dependencies/mamba ./mamba
-COPY dependencies/openssl.tar.gz .
-COPY dependencies/reproc ./reproc
-COPY dependencies/simdjson ./simdjson
-COPY dependencies/yaml-cpp-repo ./yaml-cpp-repo
-COPY dependencies/CLI11 ./CLI11
-COPY dependencies/zlib.tar.gz ./
-COPY dependencies/fmt ./fmt
-COPY dependencies/json ./json
-COPY dependencies/spdlog ./spdlog
-COPY dependencies/Python-3.11.7.tgz ./
-COPY dependencies/libunistring.tar.gz ./
-COPY dependencies/conda ./conda
-COPY dependencies/conda-index ./conda-index
-COPY dependencies/conda-smithy ./conda-smithy
-COPY dependencies/conda-build ./conda-build
-COPY dependencies/conda-libmamba-solver ./conda-libmamba-solver
-COPY dependencies/menuinst ./menuinst
-COPY dependencies/LIEF ./LIEF
+#COPY dependencies/mamba ./mamba
+#COPY dependencies/openssl.tar.gz .
+#COPY dependencies/reproc ./reproc
+#COPY dependencies/simdjson ./simdjson
+#COPY dependencies/yaml-cpp-repo ./yaml-cpp-repo
+#COPY dependencies/CLI11 ./CLI11
+#COPY dependencies/zlib.tar.gz ./
+#COPY dependencies/fmt ./fmt
+#COPY dependencies/json ./json
+#COPY dependencies/spdlog ./spdlog
+#COPY dependencies/Python-3.11.7.tgz ./
+#COPY dependencies/libunistring.tar.gz ./
+#COPY dependencies/conda ./conda
+#COPY dependencies/conda-index ./conda-index
+#COPY dependencies/conda-smithy ./conda-smithy
+#COPY dependencies/conda-build ./conda-build
+#COPY dependencies/conda-libmamba-solver ./conda-libmamba-solver
+#COPY dependencies/menuinst ./menuinst
+#COPY dependencies/LIEF ./LIEF
 # 赋予脚本执行权限并运行脚�
 # 脚本执行完毕后将其删除
 RUN chmod +x ./build_dep.sh && \

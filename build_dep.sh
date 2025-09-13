@@ -124,24 +124,24 @@ echo "=== 开始编译和安装 Micromamba 的静态依赖库 (安装到 ${DEPS_
 
 # 1. zlib
 echo "正在安装 zlib..."
-#download_with_retry https://zlib.net/zlib-1.3.1.tar.gz zlib.tar.gz
-cp /opt/builder/zlib.tar.gz ./
+download_with_retry https://zlib.net/zlib-1.3.1.tar.gz zlib.tar.gz
+#cp /opt/builder/zlib.tar.gz ./
 tar -xzf zlib.tar.gz
 (cd zlib-1.3.1 && ./configure --prefix="${DEPS_PREFIX}" --static && make -j$(nproc) && make install)
 rm -rf zlib-1.3.1 zlib.tar.gz
 
 # 2. OpenSSL
 echo "正在安装 OpenSSL..."
-#download_with_retry https://www.openssl.org/source/openssl-3.5.0.tar.gz openssl.tar.gz
-cp /opt/builder/openssl.tar.gz  ./
+download_with_retry https://www.openssl.org/source/openssl-3.5.0.tar.gz openssl.tar.gz
+#cp /opt/builder/openssl.tar.gz  ./
 tar -xzf openssl.tar.gz
 (cd openssl-3.5.0 && ./config --prefix="${DEPS_PREFIX}" --openssldir="${DEPS_PREFIX}/ssl" zlib && make -j$(nproc) && make install_sw)
 rm -rf openssl-3.5.0 openssl.tar.gz
 
 # 3. libunistring (libidn2 的依赖)
 echo "正在安装 libunistring..."
-#download_with_retry https://ftp.gnu.org/gnu/libunistring/libunistring-1.2.tar.gz libunistring.tar.gz
-cp /opt/builder/libunistring.tar.gz ./
+download_with_retry https://ftp.gnu.org/gnu/libunistring/libunistring-1.2.tar.gz libunistring.tar.gz
+#cp /opt/builder/libunistring.tar.gz ./
 tar -xzf libunistring.tar.gz
 (cd libunistring-1.2 && ./configure --prefix="${DEPS_PREFIX}" --enable-shared && make -j$(nproc) && make install)
 rm -rf libunistring-1.2 libunistring.tar.gz
@@ -251,8 +251,8 @@ rm -rf expected-1.1.0 tl-expected-v1.1.0.tar.gz
 
 # 12. reproc reproc-cpp
 echo "正在安装 reproc reproc-cpp..."
-#git_clone_with_retry https://github.com/DaanDeMeyer/reproc.git
-cp -r /opt/builder/reproc ./reproc
+git_clone_with_retry https://github.com/DaanDeMeyer/reproc.git
+#cp -r /opt/builder/reproc ./reproc
 (
   cd reproc &&
     mkdir build &&
@@ -265,8 +265,8 @@ rm -rf reproc
 
 # 13. nlohmann-json (Header-only, 但确保安装 CMake files)
 echo "正在安装 nlohmann-json..."
-#git_clone_with_retry https://github.com/nlohmann/json.git
-cp -r /opt/builder/json ./json
+git_clone_with_retry https://github.com/nlohmann/json.git
+#cp -r /opt/builder/json ./json
 (
   cd json &&
     mkdir build &&
@@ -278,8 +278,8 @@ rm -rf json
 
 # 14. simdjson
 echo "正在安装 simdjson..."
-#git_clone_with_retry https://github.com/simdjson/simdjson.git
-cp -r /opt/builder/simdjson ./simdjson
+git_clone_with_retry https://github.com/simdjson/simdjson.git
+#cp -r /opt/builder/simdjson ./simdjson
 (
   cd simdjson &&
     mkdir build &&
@@ -300,8 +300,8 @@ rm -rf simdjson
 
 # 15. yaml-cpp
 echo "正在安装 yaml-cpp..."
-#git_clone_with_retry https://github.com/jbeder/yaml-cpp.git yaml-cpp-repo
-cp -r /opt/builder/yaml-cpp-repo ./yaml-cpp-repo
+git_clone_with_retry https://github.com/jbeder/yaml-cpp.git yaml-cpp-repo
+#cp -r /opt/builder/yaml-cpp-repo ./yaml-cpp-repo
 (
   cd yaml-cpp-repo &&
     mkdir build &&
@@ -314,8 +314,8 @@ rm -rf yaml-cpp-repo
 
 # 16. CLI11
 echo "正在安装 CLI11..."
-#git_clone_with_retry https://github.com/CLIUtils/CLI11.git
-cp -r /opt/builder/CLI11 ./CLI11
+git_clone_with_retry https://github.com/CLIUtils/CLI11.git
+#cp -r /opt/builder/CLI11 ./CLI11
 (
   cd CLI11 &&
     mkdir build &&
@@ -438,8 +438,11 @@ tar -xzf pybind11.tar.gz
 rm -rf pybind11-2.11.1 pybind11.tar.gz
 
 #26. fmt
-cp -r /opt/builder/fmt ./fmt
+
+#cp -r /opt/builder/fmt ./fmt
+download_with_retry https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz fmt.tar.gz
 (
+tar xf fmt.tar.gz&& rm -f fmt.tar.gz
 cd fmt&&
 mkdir build && cd build &&
 
@@ -450,8 +453,10 @@ make install
 rm -rf fmt
 
 #27. spdlog
-cp -r /opt/builder/spdlog ./spdlog
+#cp -r /opt/builder/spdlog ./spdlog
+download_with_retry https://github.com/gabime/spdlog/archive/refs/tags/v1.13.0.tar.gz spdlog.tar.gz
 (
+tar xf spdlog.tar.gz && rm -f spdlog.tar.gz
 cd spdlog&&
 mkdir -p build &&
 cd build &&

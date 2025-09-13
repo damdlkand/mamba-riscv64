@@ -23,8 +23,8 @@ mkdir -p "${PYTHON_INSTALL_DIR}"
 cd /tmp
 if [ ! -f "Python-${PYTHON_VERSION}.tgz" ]; then
     echo "下载 Python ${PYTHON_VERSION} 源码..."
-   # wget "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz" --no-check-certificate
-   cp /opt/builder/Python-3.11.7.tgz ./
+    wget "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz" --no-check-certificate
+   #cp /opt/builder/Python-3.11.7.tgz ./
 fi
 
 # 解压源码

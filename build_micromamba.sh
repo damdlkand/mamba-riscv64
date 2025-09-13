@@ -30,7 +30,7 @@ echo "=== 1. 从源码安装 Micromamba ==="
 # Micromamba 的编译依赖 (cmake, C++ 编译器等) 应已在 Dockerfile 中安装
 cd /tmp # 在 /tmp 目录进行编译，避免污染工作目�
 
-#git clone --depth 1 https://github.com/mamba-org/mamba.git
+git clone --depth 1 https://github.com/mamba-org/mamba.git
 #git clone git@gitee.com:physicaldddd/mamba.git
 
 #mv  /home/wulin/conda-docker/conda-docker/mamba ./
@@ -41,7 +41,7 @@ cd /tmp # 在 /tmp 目录进行编译，避免污染工作目�
 #    echo "mamba 目录已存在，跳过 git clone。"
 #fi
 #ls ./
-cp -r /opt/builder/mamba ./
+#cp -r /opt/builder/mamba ./
 cd mamba
 
 # 在运行 CMake 之前修补 mamba 的 libmamba/CMakeLists.txt
