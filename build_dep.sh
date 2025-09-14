@@ -132,11 +132,12 @@ rm -rf zlib-1.3.1 zlib.tar.gz
 
 # 2. OpenSSL
 echo "正在安装 OpenSSL..."
-download_with_retry https://www.openssl.org/source/openssl-3.5.0.tar.gz openssl.tar.gz
+#download_with_retry https://www.openssl.org/source/openssl-3.5.0.tar.gz openssl.tar.gz
+download_with_retry https://mirrors.cloud.tencent.com/openssl/source/openssl-3.2.0.tar.gz openssl.tar.gz
 #cp /opt/builder/openssl.tar.gz  ./
 tar -xzf openssl.tar.gz
-(cd openssl-3.5.0 && ./config --prefix="${DEPS_PREFIX}" --openssldir="${DEPS_PREFIX}/ssl" zlib && make -j$(nproc) && make install_sw)
-rm -rf openssl-3.5.0 openssl.tar.gz
+(cd openssl-3.2.0 && ./config --prefix="${DEPS_PREFIX}" --openssldir="${DEPS_PREFIX}/ssl" zlib && make -j$(nproc) && make install)
+rm -rf openssl-3.2.0 openssl.tar.gz
 
 # 3. libunistring (libidn2 的依赖)
 echo "正在安装 libunistring..."
