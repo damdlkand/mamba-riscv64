@@ -1,0 +1,40 @@
+name: Build & Run on RISC-V
+
+on:
+  workflow_dispatch:    # 手动触发
+  push:                 # 推送也触发（需要可以保留）
+
+jobs:
+  build-and-run:
+    runs-on: [self-hosted, Linux, RISCV64]   # 必须与 Runner 标签一致
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show runner info
+        run: |
+          echo "Workspace: ${{ github.workspace }}"
+          uname -a
+
+      - name: Docker build
+        # 如果你的 runner 无需 sudo，去掉 sudo
+        run: |
+          IMAGE_TAG="local/mamba-riscv64:${{ github.sha }}"
+          sudo docker build -t "$IMAGE_TAG" .
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
+          echo "IMAGE_ID=$(sudo docker images -q "$IMAGE_TAG")" >> "$GITHUB_ENV"
+
+      - name: Create local conda channel dirs
+        run: |
+          mkdir -p local-conda-channel/linux-riscv64 local-conda-channel/noarch
+          ls -al local-conda-channel
+
+      # 在 CI 中不建议使用 `-it`（无交互 TTY），改为执行你想在容器里跑的命令
+      - name: Run container with repo mounted at /workspace
+        run: |
+          echo "Using image: $IMAGE_TAG (id: $IMAGE_ID)"
+          sudo docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            "$IMAGE_TAG" \
+            bash -lc 'pwd; ls -la /workspace; echo "container OK"'
