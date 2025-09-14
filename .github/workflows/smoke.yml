@@ -1,0 +1,8 @@
+name: RISC-V smoke
+on: [workflow_dispatch, push]
+jobs:
+  hello:
+    runs-on: [self-hosted, Linux, RISCV64]
+    steps:
+      - uses: actions/checkout@v4
+      - run: uname -a
