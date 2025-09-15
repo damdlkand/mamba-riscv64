@@ -7,30 +7,64 @@ on:
 jobs:
   build-and-run:
     runs-on: [self-hosted, Linux, RISCV64]   # 必须与 Runner 标签一致
+    permissions:
+      contents: read
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # 0) 让 SSH 走 443 端口（绕过 22/HTTPS 限制）
+      - name: Force SSH over 443 for GitHub
+        run: |
+          mkdir -p ~/.ssh
+          printf "Host github.com\n  HostName ssh.github.com\n  Port 443\n  User git\n  StrictHostKeyChecking no\n" >> ~/.ssh/config
 
+      # 0.1) 预检查：到 ssh.github.com:443 的连通性
+      - name: Preflight - connectivity to ssh.github.com:443
+        run: |
+          (command -v openssl >/dev/null && openssl s_client -connect ssh.github.com:443 -servername ssh.github.com -brief </dev/null) || true
+          # 预期：打印 "CONNECTION ESTABLISHED"；若无 openssl，此步可忽略
+
+      # 1) 用 SSH 私钥完成 checkout（关键）
+      - name: Checkout repository (SSH on 443)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ssh-key: ${{ secrets.CI_SSH_KEY }}
+
+      # 1.1) 验证：确认已经拉到代码
+      - name: Verify checkout
+        run: |
+          git -C "${{ github.workspace }}" rev-parse --short HEAD
+          # 预期：输出当前 commit 短哈希
+
+      # 2) 展示 runner 信息（保留你的步骤）
       - name: Show runner info
         run: |
           echo "Workspace: ${{ github.workspace }}"
           uname -a
 
+      # 3) Docker build（保留你的步骤）
       - name: Docker build
-        # 如果你的 runner 无需 sudo，去掉 sudo
         run: |
           IMAGE_TAG="local/mamba-riscv64:${{ github.sha }}"
           sudo docker build -t "$IMAGE_TAG" .
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
           echo "IMAGE_ID=$(sudo docker images -q "$IMAGE_TAG")" >> "$GITHUB_ENV"
 
+      # 3.1) 验证：镜像是否存在
+      - name: Verify image built
+        run: |
+          test -n "$IMAGE_TAG" && test -n "$IMAGE_ID" || (echo "IMAGE envs missing" && exit 1)
+          sudo docker image inspect "$IMAGE_TAG" >/dev/null
+          echo "OK: $IMAGE_TAG exists with id $IMAGE_ID"
+
+      # 4) 创建本地 conda 渠道目录（保留你的步骤）
       - name: Create local conda channel dirs
         run: |
           mkdir -p local-conda-channel/linux-riscv64 local-conda-channel/noarch
           ls -al local-conda-channel
 
-      # 在 CI 中不建议使用 `-it`（无交互 TTY），改为执行你想在容器里跑的命令
+      # 5) 运行容器并挂载仓库到 /workspace（保留你的步骤）
       - name: Run container with repo mounted at /workspace
         run: |
           echo "Using image: $IMAGE_TAG (id: $IMAGE_ID)"
