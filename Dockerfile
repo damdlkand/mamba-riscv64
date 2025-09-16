@@ -4,6 +4,33 @@ FROM openkylin/openkylin
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 
+# ===== Rust 镜像与最小安装 =====
+# 切到 USTC 镜像（也可以换 SJTU/清华，见注释）
+ENV RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static \
+    RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup \
+    CARGO_HOME=/root/.cargo \
+    RUSTUP_HOME=/root/.rustup \
+    # 网络更稳一点
+    CARGO_HTTP_MULTIPLEXING=false \
+    CARGO_NET_RETRY=5 \
+    CARGO_HTTP_TIMEOUT=120
+
+
+
+# 安装 rustup（最小 profile，不装 docs 组件），并添加 RISC-V 目标
+RUN set -eux; \
+    apt-get update; apt-get install -y --no-install-recommends ca-certificates curl; \
+    rm -rf /var/lib/apt/lists/*; \
+    curl -fsSL --proto '=https' --tlsv1.2 https://sh.rustup.rs -o /tmp/rustup-init.sh; \
+    sh /tmp/rustup-init.sh -y --no-modify-path --profile minimal --default-toolchain stable; \
+    . /root/.cargo/env; \
+    rustup target add riscv64gc-unknown-linux-gnu; \
+    rustup component list --installed; \
+    rm -f /tmp/rustup-init.sh
+
+# 让后续层直接找到 cargo/rustc
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 # 添加 OpenKylin 软件源
 RUN echo "deb [trusted=yes] http://factory.openkylin.top/kif/archive/get/repos/riscv_common_software nile main" > /etc/apt/sources.list.d/riscv-common.list && \
     echo "deb http://archive.build.openkylin.top/openkylin/ nile main cross pty" >> /etc/apt/sources.list && \
@@ -84,7 +111,7 @@ COPY build_dep.sh .
 #COPY dependencies/conda-libmamba-solver ./conda-libmamba-solver
 #COPY dependencies/menuinst ./menuinst
 #COPY dependencies/LIEF ./LIEF
-# 赋予脚本执行权限并运行脚�
+# 赋予脚本执行权限并运行脚�
 # 脚本执行完毕后将其删除
 RUN chmod +x ./build_dep.sh && \
     ./build_dep.sh && \
