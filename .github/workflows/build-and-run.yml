@@ -11,37 +11,73 @@ jobs:
       contents: read
 
     steps:
-      # 让 GitHub 走 SSH 的 443 端口
+      # 0) 检查私钥 Secret 是否存在
+      - name: Preflight | ensure CI_SSH_KEY present
+        run: |
+          if [ -z "${{ secrets.CI_SSH_KEY }}" ]; then
+            echo "ERROR: Secret CI_SSH_KEY is empty or missing." >&2
+            exit 1
+          fi
+          echo "OK: CI_SSH_KEY is set."
+
+      # 1) 写入并校验 OpenSSH 私钥（必须是以 BEGIN/END 开头结尾的多行文本）
+      - name: Write & validate SSH key
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf "%s\n" "${{ secrets.CI_SSH_KEY }}" > ~/.ssh/ci_rsa
+          ssh-keygen -y -f ~/.ssh/ci_rsa >/dev/null \
+            || { echo "ERROR: CI_SSH_KEY is not a valid OpenSSH private key"; exit 2; }
+          echo "OK: SSH key format looks good."
+
+      # 2) 强制 Git 走 SSH 的 443 端口，并指定上面那把私钥
       - name: Force SSH over 443 for GitHub
         run: |
-          mkdir -p ~/.ssh
-          printf "Host github.com\n  HostName ssh.github.com\n  Port 443\n  User git\n  IdentitiesOnly yes\n  StrictHostKeyChecking no\n" >> ~/.ssh/config
+          cat >> ~/.ssh/config <<'EOF'
+          Host github.com
+            HostName ssh.github.com
+            Port 443
+            User git
+            IdentityFile ~/.ssh/ci_rsa
+            IdentitiesOnly yes
+            StrictHostKeyChecking no
+          EOF
 
-      # 用 SSH 私钥完成 checkout（关键）
+      # 3) 把任何 https://github.com/... 自动改写为 SSH，且降级到协议 v1（更兼容）
+      - name: Use SSH instead of HTTPS (and protocol v1)
+        run: |
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+          git config --global protocol.version 1
+
+      # 4) 预检：真正走 git-upload-pack 的通道（不通会在这里暴露）
+      - name: Preflight | git ls-remote over SSH:443
+        run: |
+          git ls-remote git@github.com:${{ github.repository }}.git | head -n 5
+
+      # 5) 用 SSH 完成 checkout（无需再传 ssh-key 参数）
       - name: Checkout repository (SSH on 443)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1              # 只拉本次提交历史；要全历史改成 0
+          fetch-depth: 1              # 只拉本次提交历史；需要完整历史可改为 0
           persist-credentials: false
-          ssh-key: ${{ secrets.CI_SSH_KEY }}
           # 如需子模块/LFS，请取消注释：
           # submodules: recursive
           # lfs: true
           # fetch-tags: true
 
-      # 验证：确认已经拉到代码
+      # 6) 验证：确认已经拉到代码
       - name: Verify checkout
         run: |
           git -C "${{ github.workspace }}" rev-parse --short HEAD
           ls -la "${{ github.workspace }}" | head -n 50
 
-      # 展示 runner 信息
+      # 7) 展示 runner 信息
       - name: Show runner info
         run: |
           echo "Workspace: ${{ github.workspace }}"
           uname -a
 
-      # Docker build
+      # 8) Docker build
       - name: Docker build
         run: |
           IMAGE_TAG="local/mamba-riscv64:${{ github.sha }}"
@@ -49,20 +85,20 @@ jobs:
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
           echo "IMAGE_ID=$(sudo docker images -q "$IMAGE_TAG")" >> "$GITHUB_ENV"
 
-      # 验证镜像存在
+      # 9) 验证镜像存在
       - name: Verify image built
         run: |
           test -n "$IMAGE_TAG" && test -n "$IMAGE_ID" || (echo "IMAGE envs missing" && exit 1)
           sudo docker image inspect "$IMAGE_TAG" >/dev/null
           echo "OK: $IMAGE_TAG exists with id $IMAGE_ID"
 
-      # 创建本地 conda 渠道目录
+      # 10) 创建本地 conda 渠道目录
       - name: Create local conda channel dirs
         run: |
           mkdir -p local-conda-channel/linux-riscv64 local-conda-channel/noarch
           ls -al local-conda-channel
 
-      # 运行容器并挂载仓库到 /workspace
+      # 11) 运行容器并挂载仓库到 /workspace
       - name: Run container with repo mounted at /workspace
         run: |
           echo "Using image: $IMAGE_TAG (id: $IMAGE_ID)"
