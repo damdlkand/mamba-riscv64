@@ -12,22 +12,22 @@ jobs:
 
     steps:
       # 0) 检查私钥 Secret 是否存在
-      - name: Preflight | ensure CI_SSH_KEY present
+      - name: Preflight | ensure SECOND present
         run: |
-          if [ -z "${{ secrets.second }}" ]; then
-            echo "ERROR: Secret second is empty or missing." >&2
+          if [ -z "${{ secrets.SECOND }}" ]; then
+            echo "ERROR: Secret SECOND is empty or missing." >&2
             exit 1
           fi
-          echo "OK: second is set."
+          echo "OK: SECOND is set."
 
       # 1) 写入并校验 OpenSSH 私钥（必须是以 BEGIN/END 开头结尾的多行文本）
       - name: Write & validate SSH key
         run: |
           umask 077
           mkdir -p ~/.ssh
-          printf "%s\n" "${{ secrets.CI_SSH_KEY }}" > ~/.ssh/ci_rsa
+          printf "%s\n" "${{ secrets.SECOND }}" > ~/.ssh/ci_rsa
           ssh-keygen -y -f ~/.ssh/ci_rsa >/dev/null \
-            || { echo "ERROR: CI_SSH_KEY is not a valid OpenSSH private key"; exit 2; }
+            || { echo "ERROR: SECOND is not a valid OpenSSH private key"; exit 2; }
           echo "OK: SSH key format looks good."
 
       # 2) 强制 Git 走 SSH 的 443 端口，并指定上面那把私钥
