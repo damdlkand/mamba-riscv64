@@ -14,11 +14,11 @@ jobs:
       # 0) 检查私钥 Secret 是否存在
       - name: Preflight | ensure CI_SSH_KEY present
         run: |
-          if [ -z "${{ secrets.CI_SSH_KEY }}" ]; then
-            echo "ERROR: Secret CI_SSH_KEY is empty or missing." >&2
+          if [ -z "${{ secrets.second }}" ]; then
+            echo "ERROR: Secret second is empty or missing." >&2
             exit 1
           fi
-          echo "OK: CI_SSH_KEY is set."
+          echo "OK: second is set."
 
       # 1) 写入并校验 OpenSSH 私钥（必须是以 BEGIN/END 开头结尾的多行文本）
       - name: Write & validate SSH key
