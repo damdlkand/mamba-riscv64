@@ -122,6 +122,43 @@ cd "${BUILD_DIR}"
 
 echo "=== 开始编译和安装 Micromamba 的静态依赖库 (安装到 ${DEPS_PREFIX}) ==="
 
+#26. fmt
+
+#cp -r /opt/builder/fmt ./fmt
+download_with_retry https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz fmt.tar.gz
+(
+tar xf fmt.tar.gz&& rm -f fmt.tar.gz
+cd fmt-10.2.1&&
+mkdir build && cd build &&
+
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/conda_static_deps -DBUILD_SHARED_LIBS=OFF -DFMT_TEST=OFF&&
+make -j$(nproc)&&
+make install
+)
+rm -rf fmt-10.2.1
+
+#27. spdlog
+#cp -r /opt/builder/spdlog ./spdlog
+download_with_retry https://github.com/gabime/spdlog/archive/refs/tags/v1.13.0.tar.gz spdlog.tar.gz
+(
+tar xf spdlog.tar.gz && rm -f spdlog.tar.gz
+cd spdlog-1.13.0&&
+mkdir -p build &&
+cd build &&
+    cmake .. \
+      -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DSPDLOG_BUILD_SHARED=OFF \
+      -DSPDLOG_BUILD_STATIC=ON \
+      -DSPDLOG_BUILD_TESTS=OFF && 
+ make -j$(nproc) &&
+ make install
+)
+rm -rf spdlog-1.13.0
+# 清理构建目录并返回原始目录
+cd "${ORIG_DIR}"
+rm -rf "${BUILD_DIR}"
+
 # 1. zlib
 echo "正在安装 zlib..."
 download_with_retry https://zlib.net/zlib-1.3.1.tar.gz zlib.tar.gz
@@ -438,41 +475,6 @@ tar -xzf pybind11.tar.gz
 (cd pybind11-2.11.1 && mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON && make -j$(nproc) && make install)
 rm -rf pybind11-2.11.1 pybind11.tar.gz
 
-#26. fmt
 
-#cp -r /opt/builder/fmt ./fmt
-download_with_retry https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz fmt.tar.gz
-(
-tar xf fmt.tar.gz&& rm -f fmt.tar.gz
-cd fmt-10.2.1&&
-mkdir build && cd build &&
-
-cmake .. -DCMAKE_INSTALL_PREFIX=/opt/conda_static_deps -DBUILD_SHARED_LIBS=OFF -DFMT_TEST=OFF&&
-make -j$(nproc)&&
-make install
-)
-rm -rf fmt-10.2.1
-
-#27. spdlog
-#cp -r /opt/builder/spdlog ./spdlog
-download_with_retry https://github.com/gabime/spdlog/archive/refs/tags/v1.13.0.tar.gz spdlog.tar.gz
-(
-tar xf spdlog.tar.gz && rm -f spdlog.tar.gz
-cd spdlog-1.13.0&&
-mkdir -p build &&
-cd build &&
-    cmake .. \
-      -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DSPDLOG_BUILD_SHARED=OFF \
-      -DSPDLOG_BUILD_STATIC=ON \
-      -DSPDLOG_BUILD_TESTS=OFF && 
- make -j$(nproc) &&
- make install
-)
-rm -rf spdlog-1.13.0
-# 清理构建目录并返回原始目录
-cd "${ORIG_DIR}"
-rm -rf "${BUILD_DIR}"
 
 echo "=== Micromamba 的静态依赖库已成功安装到 ${DEPS_PREFIX} ==="
