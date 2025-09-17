@@ -87,7 +87,7 @@ jobs:
         run: |
           IMAGE_TAG="local/mamba-riscv64:${{ github.sha }}"
           #sudo docker build -t "$IMAGE_TAG" .
-          sudo docker build -t "$IMAGE_TAG" .
+          docker build -t "$IMAGE_TAG" .
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
           echo "IMAGE_ID=$(sudo docker images -q "$IMAGE_TAG")" >> "$GITHUB_ENV"
 
@@ -96,7 +96,7 @@ jobs:
         run: |
           test -n "$IMAGE_TAG" && test -n "$IMAGE_ID" || (echo "IMAGE envs missing" && exit 1)
           #sudo docker image inspect "$IMAGE_TAG" >/dev/null
-          sudo docker image inspect "$IMAGE_TAG" >/dev/null
+          docker image inspect "$IMAGE_TAG" >/dev/null
           echo "OK: $IMAGE_TAG exists with id $IMAGE_ID"
 
       # 10) 创建本地 conda 渠道目录
@@ -110,7 +110,7 @@ jobs:
         run: |
           echo "Using image: $IMAGE_TAG (id: $IMAGE_ID)"
           #sudo docker run --rm \
-          sudo docker run --rm \
+          docker run --rm \
             -v "${{ github.workspace }}:/workspace" \
             "$IMAGE_TAG" \
             bash -lc 'pwd; ls -la /workspace; echo "container OK"'
