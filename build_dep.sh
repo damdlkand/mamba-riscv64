@@ -125,17 +125,17 @@ echo "=== 开始编译和安装 Micromamba 的静态依赖库 (安装到 ${DEPS_
 #26. fmt
 
 #cp -r /opt/builder/fmt ./fmt
-download_with_retry https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz fmt.tar.gz
+download_with_retry https://github.com/fmtlib/fmt/archive/refs/tags/9.1.0.tar.gz fmt.tar.gz
 (
 tar xf fmt.tar.gz&& rm -f fmt.tar.gz
-cd fmt-10.2.1&&
+cd fmt-9.1.0&&
 mkdir build && cd build &&
 
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/conda_static_deps -DBUILD_SHARED_LIBS=OFF -DFMT_TEST=OFF&&
 make -j$(nproc)&&
 make install
 )
-rm -rf fmt-10.2.1
+rm -rf fmt-9.1.0
 
 #27. spdlog
 #cp -r /opt/builder/spdlog ./spdlog
