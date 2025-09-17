@@ -444,21 +444,21 @@ rm -rf pybind11-2.11.1 pybind11.tar.gz
 download_with_retry https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz fmt.tar.gz
 (
 tar xf fmt.tar.gz&& rm -f fmt.tar.gz
-cd fmt&&
+cd fmt-10.2.1&&
 mkdir build && cd build &&
 
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/conda_static_deps -DBUILD_SHARED_LIBS=OFF -DFMT_TEST=OFF&&
 make -j$(nproc)&&
 make install
 )
-rm -rf fmt
+rm -rf fmt-10.2.1
 
 #27. spdlog
 #cp -r /opt/builder/spdlog ./spdlog
 download_with_retry https://github.com/gabime/spdlog/archive/refs/tags/v1.13.0.tar.gz spdlog.tar.gz
 (
 tar xf spdlog.tar.gz && rm -f spdlog.tar.gz
-cd spdlog&&
+cd spdlog-1.13.0&&
 mkdir -p build &&
 cd build &&
     cmake .. \
@@ -470,7 +470,7 @@ cd build &&
  make -j$(nproc) &&
  make install
 )
-rm -rf spdlog
+rm -rf spdlog-1.13.0
 # 清理构建目录并返回原始目录
 cd "${ORIG_DIR}"
 rm -rf "${BUILD_DIR}"
