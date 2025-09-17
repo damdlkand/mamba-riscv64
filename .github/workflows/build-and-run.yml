@@ -86,7 +86,7 @@ jobs:
       - name: Docker build
         run: |
           IMAGE_TAG="local/mamba-riscv64:${{ github.sha }}"
-          #sudo docker build -t "$IMAGE_TAG" .
+          #sudo docker build --no-cache --pull --progress=plain -t "$IMAGE_TAG" .
           docker build -t "$IMAGE_TAG" .
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
           echo "IMAGE_ID=$(sudo docker images -q "$IMAGE_TAG")" >> "$GITHUB_ENV"
