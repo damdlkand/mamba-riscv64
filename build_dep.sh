@@ -139,10 +139,10 @@ rm -rf fmt-9.1.0
 
 #27. spdlog
 #cp -r /opt/builder/spdlog ./spdlog
-download_with_retry https://github.com/gabime/spdlog/archive/refs/tags/v1.13.0.tar.gz spdlog.tar.gz
+download_with_retry https://github.com/gabime/spdlog/archive/refs/tags/v1.15.3.tar.gz spdlog.tar.gz
 (
 tar xf spdlog.tar.gz && rm -f spdlog.tar.gz
-cd spdlog-1.13.0&&
+cd spdlog-1.15.3&&
 mkdir -p build &&
 cd build &&
     cmake .. \
@@ -154,7 +154,7 @@ cd build &&
  make -j$(nproc) &&
  make install
 )
-rm -rf spdlog-1.13.0
+rm -rf spdlog-1.15.3
 # 清理构建目录并返回原始目录
 cd "${ORIG_DIR}"
 rm -rf "${BUILD_DIR}"
