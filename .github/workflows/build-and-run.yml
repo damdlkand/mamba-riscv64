@@ -62,12 +62,24 @@ jobs:
       - name: Preflight | git ls-remote over SSH:443
         shell: bash
         run: git ls-remote git@github.com:${{ github.repository }}.git | head -n 5
-      # 打扫github.workspace
-      - name: Wipe workspace (safe)
+      # 智能识别是否拉取仓库，判断是否仓库是否存在
+      
+      - name: Wipe workspace (safe, keep .git if exists)
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".git || true
+          cd "${GITHUB_WORKSPACE}"
+
+          if [ -d .git ]; then
+            echo "[clean] Existing repo detected. Keep .git; reset & clean working tree."
+            git -c gc.auto=0 reset --hard
+            git -c gc.auto=0 clean -fdx
+          else
+            echo "[clean] No repo detected. Leave directory for checkout to initialize."
+            # 可选：如需确保目录“基本为空”，最多清掉一些临时文件，但不要动 .git（如果后续突然被放进来）
+            # find . -mindepth 1 -maxdepth 1 -name '.git' -prune -o -exec rm -rf {} + 2>/dev/null || true
+          fi
+
 
           
       # 7) checkout 到 $GITHUB_WORKSPACE（自托管路径形如 _work/<repo>/<repo>）
