@@ -82,22 +82,27 @@ jobs:
           echo "Workspace: ${{ github.workspace }}"
           uname -a
 
-      # 8) Docker build
       - name: Docker build
         run: |
+          set -euo pipefail
           IMAGE_TAG="local/mamba-riscv64:${{ github.sha }}"
-          #sudo docker build --no-cache --pull --progress=plain -t "$IMAGE_TAG" .
           docker build -t "$IMAGE_TAG" .
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
-          echo "IMAGE_ID=$(sudo docker images -q "$IMAGE_TAG")" >> "$GITHUB_ENV"
+           # 取镜像 ID（不使用 sudo）
+         
+          IMAGE_ID="$(docker images -q "$IMAGE_TAG" || true)"
+          if [ -z "$IMAGE_ID" ]; then
+             IMAGE_ID="$(docker inspect --format='{{.Id}}' "$IMAGE_TAG" || true)"
+          fi
+           echo "IMAGE_ID=$IMAGE_ID" >> "$GITHUB_ENV"
 
-      # 9) 验证镜像存在
       - name: Verify image built
         run: |
-          test -n "$IMAGE_TAG" && test -n "$IMAGE_ID" || (echo "IMAGE envs missing" && exit 1)
-          #sudo docker image inspect "$IMAGE_TAG" >/dev/null
+          set -euo pipefail
+          test -n "${IMAGE_TAG:-}" && test -n "${IMAGE_ID:-}" || { echo "IMAGE envs missing"; exit 1; }
           docker image inspect "$IMAGE_TAG" >/dev/null
           echo "OK: $IMAGE_TAG exists with id $IMAGE_ID"
+
 
       # 10) 创建本地 conda 渠道目录
       - name: Create local conda channel dirs
