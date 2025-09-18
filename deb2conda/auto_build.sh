@@ -42,7 +42,7 @@ read_channel_root() {
   python - "$ROOT/manifest.yaml" <<'PY'
 import sys,yaml
 m=yaml.safe_load(open(sys.argv[1])) or {}
-print(m.get('channel_root','./local-conda-channel/'))
+print(m.get('channel_root','/workspace/local-conda-channel/'))
 PY
 }
 # Snapshot current channel artifacts before build (for diff later)
@@ -52,20 +52,42 @@ find "$CHANNEL_ROOT_PRE" -type f \( -name '*.conda' -o -name '*.tar.bz2' \) | so
 
 calc_sig() {
   local pkg="$1"
-  local rec="$ROOT/workspace/recipes/$pkg/recipes"
-  local deb="$ROOT/workspace/recipes/$pkg/debs"
+  local base
+  base="$(resolve_base_dir "$pkg")"
+  local rec="$base/recipes"
+  local deb="$base/debs"
   {
     sha256sum "$rec/meta.yaml" "$rec/build.sh" 2>/dev/null || true
     if compgen -G "$deb"/*.deb > /dev/null; then sha256sum "$deb"/*.deb; fi
   } | sha256sum | awk '{print $1}'
 }
 
+# Resolve workspace directory for a package name, supporting version-suffixed dirs (<name>-<ver>)
+resolve_base_dir() {
+  local pkg="$1"
+  local base="$ROOT/workspace/recipes"
+  if [ -d "$base/$pkg/recipes" ]; then
+    echo "$base/$pkg"
+    return
+  fi
+  # Pick the newest recipes dir among <name>-*/recipes if multiple exist
+  local newest
+  newest="$(ls -1dt "$base/$pkg"-*/recipes 2>/dev/null | head -n1 || true)"
+  if [ -n "$newest" ]; then
+    dirname "$newest"
+    return
+  fi
+  # Fallback to non-suffixed
+  echo "$base/$pkg"
+}
+
 # 2) Build changed packages only
 while read -r pkg; do
   [[ -z "$pkg" ]] && continue
   echo "===> evaluate $pkg"
-  recdir="$ROOT/workspace/recipes/$pkg/recipes"
-  sigfile="$ROOT/workspace/recipes/$pkg/.build_sig"
+  basedir="$(resolve_base_dir "$pkg")"
+  recdir="$basedir/recipes"
+  sigfile="$basedir/.build_sig"
   newsig="$(calc_sig "$pkg")"
   CHANNEL_ROOT="$(read_channel_root)"
   # Predict output filename
@@ -121,5 +143,4 @@ NEW_COUNT="$(wc -l < "$NEW_LIST" | tr -d ' ')"
 echo "===> Added count: ${NEW_COUNT}"
 
 echo "All done."
-
 
