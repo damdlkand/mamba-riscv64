@@ -62,13 +62,21 @@ jobs:
       - name: Preflight | git ls-remote over SSH:443
         shell: bash
         run: git ls-remote git@github.com:${{ github.repository }}.git | head -n 5
+      # 打扫github.workspace
+      - name: Wipe workspace (safe)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".git || true
 
+          
       # 7) checkout 到 $GITHUB_WORKSPACE（自托管路径形如 _work/<repo>/<repo>）
       - name: Checkout repository (SSH on 443)
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           persist-credentials: false
+          clean: false 
 
       # 8) 宿主校验：必须存在 .git 与 deb2conda
       - name: Verify checkout on host
