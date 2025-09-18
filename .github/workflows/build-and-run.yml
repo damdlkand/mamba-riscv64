@@ -127,7 +127,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "Using image: $IMAGE_TAG (id: $IMAGE_ID)"
-          docker run --rm \
+          docker run -d --name mamba-dev \
             -v "${{ github.workspace }}:/workspace:rw" \
             -w /workspace \
             -e LOCAL_CHANNEL="file:///workspace/local-conda-channel" \
