@@ -1,8 +1,8 @@
 name: Build & Run on RISC-V
 
 on:
-  workflow_dispatch:    # 手动触发
-  push:                 # 推送触发
+  workflow_dispatch:
+  push:
 
 jobs:
   build-and-run:
@@ -11,13 +11,14 @@ jobs:
       contents: read
 
     steps:
-      #-1)
+      # -1) Docker 可用性
       - name: Preflight | docker usable without sudo
-        run: |
-          docker version >/dev/null || { echo "Docker not ready"; exit 1; }
-          
+        shell: bash
+        run: docker version >/dev/null || { echo "Docker not ready"; exit 1; }
+
       # 0) 检查私钥 Secret 是否存在
       - name: Preflight | ensure SECOND present
+        shell: bash
         run: |
           if [ -z "${{ secrets.SECOND }}" ]; then
             echo "ERROR: Secret SECOND is empty or missing." >&2
@@ -25,8 +26,9 @@ jobs:
           fi
           echo "OK: SECOND is set."
 
-      # 1) 写入并校验 OpenSSH 私钥（必须是以 BEGIN/END 开头结尾的多行文本）
+      # 1) 写入并校验 OpenSSH 私钥
       - name: Write & validate SSH key
+        shell: bash
         run: |
           umask 077
           mkdir -p ~/.ssh
@@ -35,8 +37,9 @@ jobs:
             || { echo "ERROR: SECOND is not a valid OpenSSH private key"; exit 2; }
           echo "OK: SSH key format looks good."
 
-      # 2) 强制 Git 走 SSH 的 443 端口，并指定上面那把私钥
+      # 2) 走 ssh.github.com:443
       - name: Force SSH over 443 for GitHub
+        shell: bash
         run: |
           cat >> ~/.ssh/config <<'EOF'
           Host github.com
@@ -48,74 +51,111 @@ jobs:
             StrictHostKeyChecking no
           EOF
 
-      # 3) 把任何 https://github.com/... 自动改写为 SSH，且降级到协议 v1（更兼容）
+      # 3) https→ssh，协议降级 v1（更兼容）
       - name: Use SSH instead of HTTPS (and protocol v1)
+        shell: bash
         run: |
           git config --global url."git@github.com:".insteadOf "https://github.com/"
           git config --global protocol.version 1
 
-      # 4) 预检：真正走 git-upload-pack 的通道（不通会在这里暴露）
+      # 4) 预检：确认 SSH 通道可达
       - name: Preflight | git ls-remote over SSH:443
+        shell: bash
         run: |
           git ls-remote git@github.com:${{ github.repository }}.git | head -n 5
 
-      # 5) 用 SSH 完成 checkout（无需再传 ssh-key 参数）
+      # 5) Checkout 仓库到 $GITHUB_WORKSPACE（自托管形如 _work/<repo>/<repo>）
       - name: Checkout repository (SSH on 443)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1              # 只拉本次提交历史；需要完整历史可改为 0
+          fetch-depth: 1
           persist-credentials: false
-          # 如需子模块/LFS，请取消注释：
           # submodules: recursive
           # lfs: true
           # fetch-tags: true
 
-      # 6) 验证：确认已经拉到代码
-      - name: Verify checkout
+      # 6) 验证：主机上必须能看到仓库与 deb2conda
+      - name: Verify checkout on host
+        shell: bash
         run: |
-          git -C "${{ github.workspace }}" rev-parse --short HEAD
-          ls -la "${{ github.workspace }}" | head -n 50
+          set -euo pipefail
+          echo "GITHUB_WORKSPACE=${{ github.workspace }}"
+          test -d "${{ github.workspace }}/.git" || { echo "ERROR: .git missing"; exit 1; }
+          test -d "${{ github.workspace }}/deb2conda" || { echo "ERROR: deb2conda missing"; exit 1; }
+          ls -la "${{ github.workspace }}" | head -n 80
 
-      # 7) 展示 runner 信息
+      # 7) Runner 信息
       - name: Show runner info
+        shell: bash
         run: |
           echo "Workspace: ${{ github.workspace }}"
           uname -a
 
-      - name: Docker build
+      # 7.5) 可持久化的 Docker 缓存（推荐）
+      - name: Prepare Docker build cache dir
+        shell: bash
+        run: |
+          sudo mkdir -p /opt/docker-cache
+          sudo chown "$USER:$USER" /opt/docker-cache || true
+
+      # 8) Docker build（使用 BuildKit + 本地缓存；同时打 latest 便于 cache-from）
+      - name: Docker build (with persistent cache)
+        shell: bash
+        env:
+          DOCKER_BUILDKIT: "1"
         run: |
           set -euo pipefail
+          docker buildx create --use --name mamba-builder 2>/dev/null || docker buildx use mamba-builder
+          docker buildx inspect --bootstrap
+
           IMAGE_TAG="local/mamba-riscv64:${{ github.sha }}"
-          docker build -t "$IMAGE_TAG" .
+
+          docker buildx build --load \
+            -t "$IMAGE_TAG" \
+            -t local/mamba-riscv64:latest \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --cache-from=type=local,src=/opt/docker-cache \
+            --cache-to=type=local,dest=/opt/docker-cache,mode=max \
+            .
+
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
-           # 取镜像 ID（不使用 sudo）
-         
-          IMAGE_ID="$(docker images -q "$IMAGE_TAG" || true)"
-          if [ -z "$IMAGE_ID" ]; then
-             IMAGE_ID="$(docker inspect --format='{{.Id}}' "$IMAGE_TAG" || true)"
-          fi
-           echo "IMAGE_ID=$IMAGE_ID" >> "$GITHUB_ENV"
+          echo "IMAGE_ID=$(docker images -q "$IMAGE_TAG")" >> "$GITHUB_ENV"
 
       - name: Verify image built
+        shell: bash
         run: |
           set -euo pipefail
           test -n "${IMAGE_TAG:-}" && test -n "${IMAGE_ID:-}" || { echo "IMAGE envs missing"; exit 1; }
           docker image inspect "$IMAGE_TAG" >/dev/null
-          echo "OK: $IMAGE_TAG exists with id $IMAGE_ID"
+          echo "OK: $IMAGE_TAG exists ($IMAGE_ID)"
 
-
-      # 10) 创建本地 conda 渠道目录
-      - name: Create local conda channel dirs
+      # 9) 在“主机的仓库目录”下创建本地 conda 频道目录（而不是当前目录）
+      - name: Create local conda channel dirs (on host)
+        shell: bash
         run: |
-          mkdir -p local-conda-channel/linux-riscv64 local-conda-channel/noarch
-          ls -al local-conda-channel
+          set -euo pipefail
+          mkdir -p "${{ github.workspace }}/local-conda-channel/linux-riscv64" \
+                   "${{ github.workspace }}/local-conda-channel/noarch"
+          ls -al "${{ github.workspace }}/local-conda-channel"
 
-      # 11) 运行容器并挂载仓库到 /workspace
+      # 10) 正确挂载：把整个仓库挂载为 /workspace，并以其为工作目录
       - name: Run container with repo mounted at /workspace
+        shell: bash
         run: |
+          set -euo pipefail
           echo "Using image: $IMAGE_TAG (id: $IMAGE_ID)"
-          #sudo docker run --rm \
           docker run --rm \
-            -v "${{ github.workspace }}:/workspace" \
+            -v "${{ github.workspace }}:/workspace:rw" \
+            -w /workspace \
+            -e LOCAL_CHANNEL="file:///workspace/local-conda-channel" \
             "$IMAGE_TAG" \
-            bash -lc 'pwd; ls -la /workspace; echo "container OK"'
+            bash -lc '
+              set -euo pipefail
+              echo "pwd: $(pwd)"
+              # 容器内再次校验：必须包含 deb2conda 与本地频道目录
+              test -d /workspace/deb2conda || { echo "ERROR: /workspace/deb2conda missing"; exit 1; }
+              ls -la /workspace | head -n 80
+              ls -la /workspace/local-conda-channel
+              echo "LOCAL_CHANNEL=$LOCAL_CHANNEL"
+              echo "container OK"
+            '
