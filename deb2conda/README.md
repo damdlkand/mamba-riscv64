@@ -53,6 +53,17 @@ packages:
     debs: [ python3-scipy_*riscv64.deb ]
     kind: python_ext
     extras: { pyver: "3.11", pyabi: "311", needs: [numpy, openblas, libgfortran], ensure_modules: [scipy] }
+
+  # 带 urls 的示例：当 --deb-src 下找不到匹配的 .deb 时，生成器会按顺序尝试下载这些 url
+  #（下载文件会保存到你提供的 --deb-src 目录中，文件名取自 URL 路径的 basename），
+  # 下载成功并通过 dpkg-deb 校验后，会再次从 --deb-src 复制到 workspace/recipes/<name>/debs/。
+  - name: jq
+    version: "1.7.1"
+    debs: [ jq_*riscv64.deb ]
+    kind: bin
+    urls:
+      - https://deb.debian.org/debian/pool/main/j/jq/jq_1.7.1-6+deb13u1_riscv64.deb
+      - http://ftp.debian.org/debian/pool/main/j/jq/jq_1.7.1-6+deb13u1_riscv64.deb
 ```
 
 ### 二、rules.yaml
@@ -92,6 +103,14 @@ test_snippets:
 
 注意：求解器（conda/libmamba）只负责“解版本”，不会“猜依赖”。依赖项需要由上述 1-3 步写入。
 
+重要注意（自依赖与误判排除）：
+- 生成器在写 `requirements.run` 时会自动过滤“自依赖”（包名等于自身的依赖项会被丢弃），避免出现 “package cannot depend on itself”。
+- 若 DSO 扫描误判出某些依赖（例如把自身或不需要的库扫描进来），可以在该包的 `manifest.yaml` 条目配置排除列表：
+  ```yaml
+  extras:
+    skip_auto: [ openssl, zlib ]  # 示例：按需填写要排除的自动推导依赖名
+  ```
+
 ### 四、生成与构建流程
 
 准备：把所有待转换的 `.deb` 放在项目根目录的 `allDebs/` 目录（或任意你指定的目录）。生成/构建时通过 `--deb-src allDebs` 让生成器自动把匹配到的 `.deb` 复制到 `workspace/recipes/<name>/debs/`。
@@ -102,6 +121,10 @@ python tools/debwrap.py gen --manifest manifest.yaml --rules rules.yaml --deb-sr
 ```
 会在 `workspace/recipes/<name>/{debs,recipes}` 下生成 `meta.yaml` 和 `build.sh`。
 
+提示（urls 自动下载）：
+- 若 `--deb-src` 目录缺少某包 `debs:` 指定的文件，生成器会读取该包的 `urls`（或 `extras.urls`），按顺序下载（最多重试 4 次），保存到 `--deb-src` 目录，然后再从 `--deb-src` 复制到对应包的 `debs/`。
+- 未提供 `--deb-src` 时不会启用自动下载。
+
 2) 构建（增量跳过、可 `--force` 强制）：
 ```
 ./auto_build.sh --deb-src allDebs [--force]
@@ -111,6 +134,22 @@ python tools/debwrap.py gen --manifest manifest.yaml --rules rules.yaml --deb-sr
 - 仅对签名变化的包执行 `conda-build`；
 - 使用 `manifest.channel_root` 作为唯一频道（`--override-channels -c file://...`）；
 - 构建后 `conda index` 更新频道索引。
+
+依赖与顺序（重要）：
+- 在 `manifest.yaml` 里，请将“被依赖的包”放在“依赖它的包”之前。例如先列 `libonig`、`libjq`，再列 `jq`。
+- 构建时，测试环境仅从本地频道解析依赖；因此依赖包必须先被构建并写入频道索引，求解器才能安装到测试环境。
+- `extras.needs` 只影响 `requirements.run`（依赖求解），不会把依赖的 `.deb` 复制到当前包目录。要打出依赖包，请在 `packages:` 中为依赖单独建条目并提供其 `debs:` 或 `urls`。
+
+推荐排序规则（强烈建议遵守）：
+1) 基础库（lib）优先：放在列表最前，包括常见运行库与数值/压缩库
+   - 例如：`libstdcxx`, `libgcc`, `libgomp`, `libgfortran`, `openblas`, `zlib`, `libzstd`, `libgmp`, `libmpfr`, `libmpc`, `libisl`, `openssl`, `libxxhash`, `libmagic`, `libjq`, `libonig` 等
+2) 工具链与工具（bin）：其次
+   - 例如：`binutils`, `gcc`/`g++`, `make`, `cmake`, `file`, `jq`
+3) 语言运行时与扩展：其后
+   - 例如：`python`（`kind: python_core`）→ `numpy`/`scipy` 等 `python_ext`
+4) 应用与数据包（bin/data）：最后
+
+这样安排可以避免“先构建依赖者时频道里还没有依赖包”导致的求解失败。
 
 ### 五、模板行为要点
 
@@ -145,6 +184,5 @@ python tools/debwrap.py gen --manifest manifest.yaml --rules rules.yaml --deb-sr
 
 - 你可以在包的 `extras.needs` 手工声明依赖；自动推导仅作为辅助。
 - 若自动 DSO 推导产生多余依赖，可用 `extras.skip_auto` 排除。
-
 
 
