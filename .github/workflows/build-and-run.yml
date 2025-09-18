@@ -1,8 +1,8 @@
 name: Build & Run on RISC-V
 
 on:
-  workflow_dispatch:        # 手动触发
-  push:                     # 推送触发
+  workflow_dispatch:
+  push:
 
 jobs:
   build-and-run:
@@ -37,7 +37,7 @@ jobs:
             || { echo "ERROR: SECOND is not a valid OpenSSH private key"; exit 2; }
           echo "OK: SSH key format looks good."
 
-      # 4) 强制 Git 走 ssh.github.com:443（绕过 22 端口受限）
+      # 4) 强制 Git 走 ssh.github.com:443（绕过 22 端口限制）
       - name: Force SSH over 443 for GitHub
         shell: bash
         run: |
@@ -87,38 +87,21 @@ jobs:
           echo "Workspace: ${{ github.workspace }}"
           uname -a
 
-      # 10) Docker build：若有 buildx 用 buildx（带目录缓存）；否则回退到普通 docker build
-      - name: Docker build (auto-detect buildx, no sudo)
+      # 10) Docker build：强制禁用 BuildKit（避免提示要求 buildx）
+      - name: Docker build (classic builder; buildx & BuildKit disabled)
         shell: bash
         env:
-          DOCKER_BUILDKIT: "1"
+          DOCKER_BUILDKIT: "0"   # 关键！禁用 BuildKit，走老的 builder
         run: |
           set -euo pipefail
           IMAGE_TAG="local/mamba-riscv64:${{ github.sha }}"
-          CACHE_DIR="${CACHE_DIR:-$HOME/.cache/docker-buildx}"
-
-          if docker buildx version >/dev/null 2>&1; then
-            echo "[info] Using docker buildx with local cache: $CACHE_DIR"
-            docker buildx create --use --name mamba-builder 2>/dev/null || docker buildx use mamba-builder
-            docker buildx inspect --bootstrap
-            docker buildx build --load \
-              -t "$IMAGE_TAG" \
-              -t local/mamba-riscv64:latest \
-              --build-arg BUILDKIT_INLINE_CACHE=1 \
-              --cache-from=type=local,src="$CACHE_DIR" \
-              --cache-to=type=local,dest="$CACHE_DIR",mode=max \
-              .
-          else
-            echo "[warn] buildx not found, falling back to plain 'docker build' (no local dir cache)"
-            docker build \
-              -t "$IMAGE_TAG" \
-              -t local/mamba-riscv64:latest \
-              --build-arg BUILDKIT_INLINE_CACHE=1 \
-              .
-          fi
-
+          docker build \
+            -t "$IMAGE_TAG" \
+            -t local/mamba-riscv64:latest \
+            .
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
-          echo "IMAGE_ID=$(docker images -q "$IMAGE_TAG")" >> "$GITHUB_ENV"
+          IMAGE_ID="$(docker images -q "$IMAGE_TAG" | head -n1)"
+          echo "IMAGE_ID=$IMAGE_ID" >> "$GITHUB_ENV"
 
       # 11) 校验镜像存在
       - name: Verify image built
