@@ -79,6 +79,29 @@ jobs:
           echo "Workspace: ${{ github.workspace }}"
           uname -a
 
+      - name: Ensure docker buildx (user-space, no sudo)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! docker buildx version >/dev/null 2>&1; then
+          mkdir -p ~/.docker/cli-plugins
+          BX_VER="v0.13.2"  # 版本可按需改
+          arch="$(uname -m)"
+          case "$arch" in
+           riscv64)  bx_asset="buildx-${BX_VER}.linux-riscv64" ;;
+           aarch64|arm64) bx_asset="buildx-${BX_VER}.linux-arm64" ;;
+           x86_64|amd64)  bx_asset="buildx-${BX_VER}.linux-amd64" ;;
+           *) echo "Unsupported arch: $arch"; exit 1 ;;
+           esac
+           curl -L --fail \
+             "https://github.com/docker/buildx/releases/download/${BX_VER}/${bx_asset}" \
+            -o ~/.docker/cli-plugins/docker-buildx
+            chmod +x ~/.docker/cli-plugins/docker-buildx
+          fi
+          docker buildx version
+
+
+      
       # ---- 无 sudo：用用户可写缓存目录 ----
       - name: Prepare Docker build cache dir (no sudo)
         shell: bash
