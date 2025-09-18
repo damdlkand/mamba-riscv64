@@ -87,11 +87,11 @@ jobs:
           echo "Workspace: ${{ github.workspace }}"
           uname -a
 
-      # 10) Docker build：强制禁用 BuildKit（避免提示要求 buildx）
+      # 10) Docker build：显式禁用 BuildKit，用经典 builder（避免 buildx）
       - name: Docker build (classic builder; buildx & BuildKit disabled)
         shell: bash
         env:
-          DOCKER_BUILDKIT: "0"   # 关键！禁用 BuildKit，走老的 builder
+          DOCKER_BUILDKIT: "0"   # 关键！禁用 BuildKit
         run: |
           set -euo pipefail
           IMAGE_TAG="local/mamba-riscv64:${{ github.sha }}"
@@ -121,23 +121,38 @@ jobs:
                    "${{ github.workspace }}/local-conda-channel/noarch"
           ls -al "${{ github.workspace }}/local-conda-channel"
 
-      # 13) 正确挂载：整个仓库 → /workspace；容器内再次校验 deb2conda 与本地频道
-      - name: Run container with repo mounted at /workspace
+      # 13) 启动“常驻容器”（若已存在同名容器则替换为最新镜像）
+      - name: Start persistent dev container (keep running)
         shell: bash
+        env:
+          CN: mamba-dev
         run: |
           set -euo pipefail
-          echo "Using image: $IMAGE_TAG (id: $IMAGE_ID)"
-          docker run -d --name mamba-dev \
+          # 如已存在同名容器，先删掉（忽略失败）
+          if docker ps -a --format '{{.Names}}' | grep -qx "$CN"; then
+            docker rm -f "$CN" >/dev/null 2>&1 || true
+          fi
+
+          docker run -d --name "$CN" \
             -v "${{ github.workspace }}:/workspace:rw" \
             -w /workspace \
             -e LOCAL_CHANNEL="file:///workspace/local-conda-channel" \
             "$IMAGE_TAG" \
-            bash -lc '
-              set -euo pipefail
-              echo "pwd: $(pwd)"
-              test -d /workspace/deb2conda || { echo "ERROR: /workspace/deb2conda missing"; exit 1; }
-              ls -la /workspace | head -n 80
-              ls -la /workspace/local-conda-channel
-              echo "LOCAL_CHANNEL=$LOCAL_CHANNEL"
-              echo "container OK"
-            '
+            bash -lc 'tail -f /dev/null'   # 保活
+
+          echo "Container $CN is now running:"
+          docker ps --filter "name=$CN"
+
+      # 14) 贴心提示：后续进入容器的方法
+      - name: How to exec into the container (hint)
+        shell: bash
+        env:
+          CN: mamba-dev
+        run: |
+          cat <<'TIP'
+          To enter the persistent container later on the host:
+              docker exec -it mamba-dev bash
+
+          The repo is mounted at: /workspace
+          Local conda channel:   /workspace/local-conda-channel
+          TIP
