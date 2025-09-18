@@ -111,26 +111,50 @@ def detect_python_version_from_manifest(manifest: Dict[str, Any]) -> Tuple[str, 
 def compute_run_deps(pkg: Dict[str, Any], rules: Dict[str, Any], auto_run_deps: Optional[List[str]] = None) -> List[str]:
     run_deps: List[str] = []
 
+    def _clean(items: Optional[List[Any]]) -> List[str]:  # type: ignore[name-defined]
+        result: List[str] = []
+        if not items:
+            return result
+        for x in items:
+            if x is None:
+                continue
+            s = str(x).strip()
+            if not s:
+                continue
+            result.append(s)
+        return result
+
+    pkg_name = str(pkg.get("name", "")).strip()
+
     # Allow extras.needs to directly specify run deps
     extras = pkg.get("extras", {}) or {}
-    needs = extras.get("needs", []) or []
-    if isinstance(needs, list):
-        run_deps.extend([str(x) for x in needs])
+    needs = _clean(extras.get("needs", []) or [])
+    run_deps.extend(needs)
 
     # If python_ext, consider python_site_requires overrides by package name
     if pkg.get("kind") == "python_ext":
         site_requires = rules.get("python_site_requires", {}) or {}
-        reqs = site_requires.get(pkg.get("name"), []) or []
-        run_deps.extend([str(x) for x in reqs])
+        reqs = _clean(site_requires.get(pkg.get("name"), []) or [])
+        run_deps.extend(reqs)
 
     # Auto derived dependencies from DSO scanning (if provided)
-    if auto_run_deps:
-        run_deps.extend([str(x) for x in auto_run_deps])
+    run_deps.extend(_clean(auto_run_deps or []))
 
-    # Dedupe while keeping order
+    # Optional: exclude specific auto deps
+    skip_auto = set(_clean((extras.get("skip_auto") or [])))
+
+    # Dedupe while keeping order, drop self-dependency and skipped ones
     seen = set()
     unique: List[str] = []
     for r in run_deps:
+        if not r:
+            continue
+        # strip version spec for comparison when checking self
+        r_name = r.split()[0]
+        if r_name == pkg_name:
+            continue
+        if r_name in skip_auto:
+            continue
         if r not in seen:
             unique.append(r)
             seen.add(r)
@@ -452,6 +476,7 @@ def cmd_gen(manifest_path: Path, rules_path: Path, deb_src: Optional[Path] = Non
             print("[WARN] Skip entry without name")
             continue
 
+        # Start with non-versioned directory; we may rename to a versioned directory later
         base_dir = WORKSPACE_DIR / name
         debs_dir = base_dir / "debs"
         recipes_dir = base_dir / "recipes"
@@ -503,8 +528,61 @@ def cmd_gen(manifest_path: Path, rules_path: Path, deb_src: Optional[Path] = Non
                 if auto_run:
                     pkg["_auto_run_deps"] = auto_run
 
+        # Decide final workspace directory name (with version suffix if available)
+        # Priority: manifest.version > extras.version > detected _resolved_version > no suffix
+        dir_ver: Optional[str] = None
+        direct_v = pkg.get("version")
+        if isinstance(direct_v, str) and direct_v.strip():
+            dir_ver = _sanitize_conda_version(direct_v)
+        else:
+            extras_v = (pkg.get("extras", {}) or {}).get("version")
+            if isinstance(extras_v, str) and extras_v.strip():
+                dir_ver = _sanitize_conda_version(extras_v)
+            else:
+                resolved_v = pkg.get("_resolved_version")
+                if isinstance(resolved_v, str) and resolved_v.strip():
+                    dir_ver = _sanitize_conda_version(resolved_v)
+
+        if dir_ver:
+            target_dir = WORKSPACE_DIR / f"{name}-{dir_ver}"
+        else:
+            target_dir = base_dir
+
+        # If target directory differs, move/merge current temp dir into the versioned one
+        if target_dir != base_dir:
+            ensure_dir(target_dir)
+            # Move contents over and remove the temp base dir
+            for item in base_dir.iterdir():
+                dest = target_dir / item.name
+                if dest.exists():
+                    # If destination exists, attempt to merge directories or overwrite files
+                    if item.is_dir() and dest.is_dir():
+                        for sub in item.iterdir():
+                            shutil.move(str(sub), str(dest / sub.name))
+                        shutil.rmtree(item)
+                    else:
+                        # Overwrite the destination
+                        if dest.is_dir():
+                            shutil.rmtree(dest)
+                        else:
+                            dest.unlink(missing_ok=True)
+                        shutil.move(str(item), str(dest))
+                else:
+                    shutil.move(str(item), str(dest))
+            # finally, remove the empty base_dir
+            try:
+                base_dir.rmdir()
+            except Exception:
+                pass
+            # update working paths
+            base_dir = target_dir
+            debs_dir = base_dir / "debs"
+            recipes_dir = base_dir / "recipes"
+            ensure_dir(recipes_dir)
+
         render_templates(pkg, rules, pyver, pyabi, env, recipes_dir)
-        print(f"[OK] Generated recipe for {name} -> {recipes_dir}")
+        final_dir_display = base_dir.name
+        print(f"[OK] Generated recipe for {name} -> {recipes_dir} (dir: {final_dir_display})")
 
 #作用：定义 gen 子命令及其参数；路由到 cmd_gen。
 
@@ -531,4 +609,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
